@@ -1,7 +1,7 @@
 {
   "author": "Termina1",
   "name": "coffee-fast-compile",
-  "description": "Converts node.js code to amd style modules, so it can be used in a browser",
+  "description": "Module for fast compilation whole directories with very simple API",
   "version": "0.0.2",
   "repository": {
     "type": "git",
