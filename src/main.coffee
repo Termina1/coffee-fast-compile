@@ -29,7 +29,7 @@ defaultPipe = (output = []) ->
         mkdirp.sync fulldir unless res
         fs.writeFile "#{fulldir}/#{data.file.split('/').slice(-1)[0].replace('.coffee', '.js')}", data.code
 
-watchPipe: (dir, callback) ->
+watchPipe = (dir, callback) ->
   watcher = watch.watchTree dir
   pipe = through()
   watcher.on 'fileModified', (file) =>
