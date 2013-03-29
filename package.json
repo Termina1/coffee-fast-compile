@@ -16,6 +16,7 @@
     "watch-tree": "0.1.x",
     "node-promise": "0.5.x",
     "mkdirp": "0.3.x",
-    "coffee-script": "1.6.x"
+    "coffee-script": "1.6.x",
+    "through": "2.2.x"
   }
 }

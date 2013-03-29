@@ -5,8 +5,9 @@ mkdirp = require 'mkdirp'
 EventEmitter = require('events').EventEmitter
 watch = require 'watch-tree'
 walk = require 'walk'
+through = require 'through'
 
-initThread = (file, promise, output) ->
+initThread = (file, promise, pipe) ->
   fs.readFile file, (err, data) ->
     if err
       console.log(err)
@@ -15,37 +16,49 @@ initThread = (file, promise, output) ->
         compiled = coffee.compile(data.toString())
       else
         compiled = data.toString()
-      emitter = new EventEmitter
-      emitter.once 'wrote', -> do promise.resolve
-      output = [output] if typeof output is 'string'
-      output.forEach (dir) ->
-        fulldir = "#{dir}/#{file.split('/').slice(2, -1).join('/')}"
-        fs.stat fulldir, (err, res) ->
-          mkdirp.sync fulldir unless res
-          fs.writeFile "#{fulldir}/#{file.split('/').slice(-1)[0].replace('.coffee', '.js')}", compiled, (err) ->
-            emitter.emit 'wrote'
+      pipe.write code: compiled, file: file
+      promise.resolve()
+
+defaultPipe = (output = []) ->
+  through (data) ->
+    @queue data
+    output = [output] if typeof output is 'string'
+    output.forEach (dir) ->
+      fulldir = "#{dir}/#{data.file.split('/').slice(2, -1).join('/')}"
+      fs.stat fulldir, (err, res) ->
+        mkdirp.sync fulldir unless res
+        fs.writeFile "#{fulldir}/#{data.file.split('/').slice(-1)[0].replace('.coffee', '.js')}", data.code
 
 module.exports =
-  process: (output, files, callback) ->
+  process: (pipe, files, callback) ->
     promises = []
+    #pipe.resume()
     for file in files
       promise = new p.Promise
       promises.push promise
-      initThread file, promise, output
+      initThread file, promise, pipe
 
     p.all(promises).then -> 
       callback files if typeof callback is 'function'
+      #pipe.pause()
 
   watch: (dir, output, callback) ->
+    pipe = @build dir, output, callback
+    @watchPipe(dir, callback).pipe pipe
+
+  watchPipe: (dir, callback) ->
     watcher = watch.watchTree dir
-    @build dir, output, =>
-      watcher.on 'fileModified', (file) =>
-        @process output, [file], callback
+    pipe = through()
+    watcher.on 'fileModified', (file) =>
+      @process pipe, [file], callback
+    pipe
 
   build: (dir, output, callback) ->
-    walker = walk.walk './src'
+    walker = walk.walk dir
     files = []
+    pipe = defaultPipe output
     walker.on 'file', (root, fileStats, next) ->
       files.push "#{root}/#{fileStats.name}"
       do next
-    walker.on 'end', => @process output, files, callback
+    walker.on 'end', => @process pipe, files, callback
+    pipe
