@@ -22,32 +22,33 @@ initThread = (file, promise, pipe) ->
 defaultPipe = (output = []) ->
   through (data) ->
     @queue data
-    output = [output] if typeof output is 'string'
-    output.forEach (dir) ->
-      fulldir = "#{dir}/#{data.file.split('/').slice(2, -1).join('/')}"
-      fs.stat fulldir, (err, res) ->
-        mkdirp.sync fulldir unless res
-        fs.writeFile "#{fulldir}/#{data.file.split('/').slice(-1)[0].replace('.coffee', '.js')}", data.code
+    unless data is 'compiled'
+      output = [output] if typeof output is 'string'
+      output.forEach (dir) ->
+        fulldir = "#{dir}/#{data.file.split('/').slice(2, -1).join('/')}"
+        fs.stat fulldir, (err, res) ->
+          mkdirp.sync fulldir unless res
+          fs.writeFile "#{fulldir}/#{data.file.split('/').slice(-1)[0].replace('.coffee', '.js')}", data.code
+        
+process = (pipe, files, callback) ->
+  promises = []
+  for file in files
+    promise = new p.Promise
+    promises.push promise
+    initThread file, promise, pipe
+
+  p.all(promises).then -> 
+    callback files if typeof callback is 'function'
+    pipe.write 'compiled'
 
 watchPipe = (dir, callback) ->
   watcher = watch.watchTree dir
   pipe = through()
   watcher.on 'fileModified', (file) =>
-    @process pipe, [file], callback
+    process pipe, [file], callback
   pipe
 
 module.exports =
-  process: (pipe, files, callback) ->
-    promises = []
-    #pipe.resume()
-    for file in files
-      promise = new p.Promise
-      promises.push promise
-      initThread file, promise, pipe
-
-    p.all(promises).then -> 
-      callback files if typeof callback is 'function'
-      #pipe.pause()
 
   watch: (dir, output, callback) ->
     pipe = @build dir, output, callback
@@ -60,5 +61,5 @@ module.exports =
     walker.on 'file', (root, fileStats, next) ->
       files.push "#{root}/#{fileStats.name}"
       do next
-    walker.on 'end', => @process pipe, files, callback
+    walker.on 'end', => process pipe, files, callback
     pipe
