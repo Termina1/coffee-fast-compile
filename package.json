@@ -2,7 +2,7 @@
   "author": "Termina1",
   "name": "coffee-fast-compile",
   "description": "Module for fast compilation whole directories with very simple API",
-  "version": "0.0.2",
+  "version": "0.2.1",
   "repository": {
     "type": "git",
     "url": "git://github.com/Termina1/coffee-fast-compile.git"
