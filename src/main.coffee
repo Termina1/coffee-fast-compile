@@ -3,7 +3,7 @@ p = require 'node-promise'
 fs = require 'fs'
 mkdirp = require 'mkdirp'
 EventEmitter = require('events').EventEmitter
-watch = require 'watch-tree'
+watch = require 'watch-tree-maintained'
 walk = require 'walk'
 through = require 'through'
 
